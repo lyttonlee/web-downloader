@@ -5,7 +5,7 @@ import { sumProgress, sumSpeed } from './utils/util';
  * @Author: lyttonlee lzr3278@163.com
  * @Date: 2022-12-02 13:41:26
  * @LastEditors: lyttonlee lzr3278@163.com
- * @LastEditTime: 2022-12-06 15:35:46
+ * @LastEditTime: 2022-12-08 13:43:55
  * @FilePath: \web-downloader\src\Downloader.ts
  * @Description: 这是默认设置,请设置`customMade`, 打开koroFileHeader查看配置 进行设置: https://github.com/OBKoro1/koro1FileHeader/wiki/%E9%85%8D%E7%BD%AE
  */
@@ -26,22 +26,22 @@ export enum eventName {
 
 class WebDownloader {
   // 分片下载的大小 bytes
-  public fileChunkSize: number;
+  private fileChunkSize: number;
   // 下载最大连接数
-  maxDownloadConnect: number;
+  private maxDownloadConnect: number;
   // 下载的文件列表
-  downloadList: Array<FileInfo>;
+  private downloadList: Array<FileInfo>;
   // 下载的请求队列，每次添加新文件下载时，会默认切片后推入下载队列
-  fetchQueue: Array<QueueItem>;
+  private fetchQueue: Array<QueueItem>;
   // 正在被使用的下载连接数
-  usedConnect: number;
+  private usedConnect: number;
   // 失败异常的请求队列
-  exceptionQueue: Array<QueueItem>;
+  private exceptionQueue: Array<QueueItem>;
   // 监听下载进度回调事件
-  progressFn: Array<Function>;
-  constructor(option: Option) {
-    this.fileChunkSize = option.fileChunkSize || 5 * 1024 * 1024;
-    this.maxDownloadConnect = option.maxDownloadConnect || 5;
+  private progressFn: Array<Function>;
+  constructor(option?: Option) {
+    this.fileChunkSize = option?.fileChunkSize || 5 * 1024 * 1024;
+    this.maxDownloadConnect = option?.maxDownloadConnect || 5;
     this.downloadList = [];
     this.fetchQueue = [];
     this.exceptionQueue = [];
@@ -50,7 +50,7 @@ class WebDownloader {
     this.init();
   }
 
-  init() {
+  private init() {
     try {
       this.checkEnv();
     } catch (error) {}
@@ -62,7 +62,7 @@ class WebDownloader {
     }
   }
 
-  on(type: eventName, callback: Function) {
+  public on(type: eventName, callback: Function) {
     if (type in eventName) {
       this.progressFn.push(callback);
     } else {
@@ -70,7 +70,7 @@ class WebDownloader {
     }
   }
 
-  off(type: eventName, callback: Function) {
+  public off(type: eventName, callback: Function) {
     if (type in eventName) {
       let fnIndex = this.progressFn.findIndex((fn) => fn === callback);
       if (fnIndex !== -1) {
@@ -83,29 +83,32 @@ class WebDownloader {
     }
   }
 
-  clearAllEvent() {
+  public clearAllEvent() {
     this.progressFn = [];
   }
 
   // 下载暂停事件
-  pause(id: string) {
+  public pause(id: string) {
     // 1. 查找下载队列中该id的所有任务
     let deleteIndexList: Array<number> = [];
     this.fetchQueue.forEach((item, index) => {
       let isTargetFile: boolean = item.fileInfo.fileId === id;
       if (isTargetFile) {
+        console.log(index);
         deleteIndexList.push(index);
       }
     });
     // 2. 将下载队列中对应任务删除，并將對應任務寫入異常下載隊列
     deleteIndexList.forEach((index) => {
       let dropItem = this.fetchQueue.splice(index, 1);
-      this.exceptionQueue.push(dropItem[0]);
+      if (dropItem && dropItem[0]) {
+        this.exceptionQueue.push(dropItem[0]);
+      }
     });
   }
 
   // 重新開始下載事件 start
-  start(id: string) {
+  public start(id: string) {
     console.log(id);
     // 1. 判斷找出異常隊列中存在該id的任務
     let restartList: Array<number> = [];
@@ -122,7 +125,7 @@ class WebDownloader {
     });
   }
 
-  download(url: string, fileName: string) {
+  public download(url: string, fileName: string) {
     const fileInfo = new FileInfo({
       url,
       fileName,
@@ -132,7 +135,7 @@ class WebDownloader {
     return fileInfo;
   }
 
-  async downloadFile(fileInfo: FileInfo) {
+  private async downloadFile(fileInfo: FileInfo) {
     try {
       const fileSize = await this.getFileTotalSize(fileInfo);
       fileInfo.size = fileSize;
@@ -152,7 +155,7 @@ class WebDownloader {
     }
   }
 
-  async checkDownload() {
+  private async checkDownload() {
     // 当分片队列中有任务 且 当前被占用的下载连接数小于最大可用连接时，执行下载
     if (
       this.fetchQueue.length > 0 &&
@@ -207,7 +210,7 @@ class WebDownloader {
     }
   }
 
-  saveFile(info: FileInfo) {
+  private saveFile(info: FileInfo) {
     // 1. 拼接文件
     console.log(info);
     let result = new Uint8Array(info.size);
@@ -236,7 +239,7 @@ class WebDownloader {
     this.downloadList.splice(index, 1);
   }
 
-  getFileTotalSize(fileInfo: FileInfo): Promise<number> {
+  private getFileTotalSize(fileInfo: FileInfo): Promise<number> {
     return new Promise(async (resolve, reject) => {
       try {
         const headRes = await fetch(fileInfo.url, {
@@ -260,7 +263,10 @@ class WebDownloader {
     });
   }
 
-  getFileChunk(fileInfo: FileInfo, index: number): Promise<ArrayBuffer> {
+  private getFileChunk(
+    fileInfo: FileInfo,
+    index: number
+  ): Promise<ArrayBuffer> {
     return new Promise(async (resolve, reject) => {
       try {
         let start = index * this.fileChunkSize;
