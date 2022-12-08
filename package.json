@@ -1,12 +1,12 @@
 {
-  "name": "web-downloader",
+  "name": "web-file-downloader",
   "private": false,
   "version": "1.1.2",
   "type": "module",
   "description": "a useful tool for web brower download large or multi file",
   "homepage": "https://github.com/lyttonlee/web-downloader",
-  "types": "./dist/web-downloader.d.ts",
-  "main": "./dist/web-downloader.esm.js",
+  "types": "./dist/web-file-downloader.d.ts",
+  "main": "./dist/web-file-downloader.esm.js",
   "scripts": {
     "dev": "vite",
     "build": "rollup -c rollup.config.js",
