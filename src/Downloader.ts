@@ -1,14 +1,14 @@
-import FileInfo, { status } from './FileInfo';
-import { sumProgress, sumSpeed } from './utils/util';
-
 /*
  * @Author: lyttonlee lzr3278@163.com
  * @Date: 2022-12-02 13:41:26
  * @LastEditors: lyttonlee lzr3278@163.com
- * @LastEditTime: 2022-12-08 13:43:55
+ * @LastEditTime: 2022-12-09 15:39:27
  * @FilePath: \web-downloader\src\Downloader.ts
  * @Description: 这是默认设置,请设置`customMade`, 打开koroFileHeader查看配置 进行设置: https://github.com/OBKoro1/koro1FileHeader/wiki/%E9%85%8D%E7%BD%AE
  */
+import FileInfo, { status } from './FileInfo';
+import { sumProgress, sumSpeed } from './utils/util';
+
 interface Option {
   fileChunkSize?: number;
   maxDownloadConnect?: number;
@@ -33,6 +33,7 @@ class WebDownloader {
   private downloadList: Array<FileInfo>;
   // 下载的请求队列，每次添加新文件下载时，会默认切片后推入下载队列
   private fetchQueue: Array<QueueItem>;
+  // private fetchMap: Map<string, Array<QueueItem>>;
   // 正在被使用的下载连接数
   private usedConnect: number;
   // 失败异常的请求队列
@@ -44,6 +45,7 @@ class WebDownloader {
     this.maxDownloadConnect = option?.maxDownloadConnect || 5;
     this.downloadList = [];
     this.fetchQueue = [];
+    // this.fetchMap = new Map();
     this.exceptionQueue = [];
     this.usedConnect = 0;
     this.progressFn = [];
@@ -90,45 +92,62 @@ class WebDownloader {
   // 下载暂停事件
   public pause(id: string) {
     // 1. 查找下载队列中该id的所有任务
-    let deleteIndexList: Array<number> = [];
-    this.fetchQueue.forEach((item, index) => {
+    // 创建temp数组
+    let tempFetchQueue: Array<QueueItem> = [];
+    this.fetchQueue.forEach((item) => {
       let isTargetFile: boolean = item.fileInfo.fileId === id;
       if (isTargetFile) {
-        console.log(index);
-        deleteIndexList.push(index);
+        // 将需要暂停的下载添加到 异常队列
+        this.exceptionQueue.push(item);
+      } else {
+        // 无需暂停的加载到缓存数组中
+        tempFetchQueue.push(item);
       }
     });
-    // 2. 将下载队列中对应任务删除，并將對應任務寫入異常下載隊列
-    deleteIndexList.forEach((index) => {
-      let dropItem = this.fetchQueue.splice(index, 1);
-      if (dropItem && dropItem[0]) {
-        this.exceptionQueue.push(dropItem[0]);
-      }
-    });
+    // 将缓存数组重新赋值为下载队列
+    this.fetchQueue = tempFetchQueue;
   }
 
   // 重新開始下載事件 start
   public start(id: string) {
     console.log(id);
     // 1. 判斷找出異常隊列中存在該id的任務
-    let restartList: Array<number> = [];
-    this.exceptionQueue.forEach((item, index) => {
+    // 创建temp数组
+    let tempExceptionQueue: Array<QueueItem> = [];
+    this.exceptionQueue.forEach((item) => {
       const isTargetFile: boolean = item.fileInfo.fileId === id;
       if (isTargetFile) {
-        restartList.push(index);
+        // 2. 將對應任務寫入到下載隊列頭部
+        this.fetchQueue.unshift(item);
+      } else {
+        tempExceptionQueue.push(item);
       }
     });
-    // 2. 將任務刪除，並將對應任務寫入到下載隊列頭部
-    restartList.forEach((index) => {
-      let startItem = this.exceptionQueue.splice(index, 1);
-      this.fetchQueue.unshift(startItem[0]);
-    });
+    // 完成后将temp数组重新赋值给异常下载队列
+    this.exceptionQueue = tempExceptionQueue;
+
+    this.checkDownload();
   }
 
-  public download(url: string, fileName: string) {
+  public delete(id: string) {
+    // ..
+    console.log(id);
+    this.fetchQueue = this.fetchQueue.filter(
+      (item) => item.fileInfo.fileId !== id
+    );
+    this.exceptionQueue = this.exceptionQueue.filter(
+      (item) => item.fileInfo.fileId !== id
+    );
+    // 清楚記錄
+    const index = this.downloadList.findIndex((item) => item.fileId === id);
+    this.downloadList.splice(index, 1);
+  }
+
+  public download(url: string, fileName: string, hash?: string) {
     const fileInfo = new FileInfo({
       url,
       fileName,
+      hash,
     });
     this.downloadList.push(fileInfo);
     this.downloadFile(fileInfo);
@@ -142,12 +161,16 @@ class WebDownloader {
       // 构建分片下载
       let slices = Math.ceil(fileInfo.size / this.fileChunkSize);
       fileInfo.blockLength = slices;
+      let fetchArray = [];
       for (let index = 0; index < slices; index++) {
-        this.fetchQueue.push({
+        fetchArray.push({
           index,
           fileInfo,
         });
       }
+      this.fetchQueue.push(...fetchArray);
+      // this.fetchMap.set(fileInfo.fileId, fetchArray);
+
       // 检查资源开始下载
       this.checkDownload();
     } catch (error) {
@@ -162,6 +185,9 @@ class WebDownloader {
       this.usedConnect < this.maxDownloadConnect
     ) {
       let remainConnect = this.maxDownloadConnect - this.usedConnect;
+      console.log(`当前剩余请求下载长度： ${this.fetchQueue.length}`);
+      console.log(`正在下载的请求数： ${this.usedConnect}`);
+      console.log(`本次将使用请求数: ${remainConnect}`);
       for (let index = 0; index < remainConnect; index++) {
         const curDownload = this.fetchQueue.shift();
         if (curDownload) {

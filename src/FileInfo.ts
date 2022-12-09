@@ -2,7 +2,7 @@
  * @Author: lyttonlee lzr3278@163.com
  * @Date: 2022-12-02 15:14:42
  * @LastEditors: lyttonlee lzr3278@163.com
- * @LastEditTime: 2022-12-05 16:57:14
+ * @LastEditTime: 2022-12-09 15:07:30
  * @FilePath: \web-downloader\src\FileInfo.ts
  * @Description: 这是默认设置,请设置`customMade`, 打开koroFileHeader查看配置 进行设置: https://github.com/OBKoro1/koro1FileHeader/wiki/%E9%85%8D%E7%BD%AE
  */
@@ -10,6 +10,7 @@ import { createDownloadKey } from './utils/sm';
 interface Info {
   url: string;
   fileName: string;
+  hash?: string;
 }
 
 export const enum status {
@@ -22,6 +23,7 @@ export const enum status {
 class FileInfo {
   url: string;
   fileName: string;
+  hash: string;
   fileId: string;
   errorMsg: string;
   status: status;
@@ -36,6 +38,7 @@ class FileInfo {
   constructor(info: Info) {
     this.url = info.url;
     this.fileName = info.fileName;
+    this.hash = info.hash || '';
     this.fileId = createDownloadKey(this.fileName);
     this.errorMsg = '';
     this.status = status.PENGDING;
