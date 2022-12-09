@@ -2,7 +2,7 @@
  * @Author: lyttonlee lzr3278@163.com
  * @Date: 2022-12-02 13:41:26
  * @LastEditors: lyttonlee lzr3278@163.com
- * @LastEditTime: 2022-12-09 15:39:27
+ * @LastEditTime: 2022-12-09 16:55:24
  * @FilePath: \web-downloader\src\Downloader.ts
  * @Description: 这是默认设置,请设置`customMade`, 打开koroFileHeader查看配置 进行设置: https://github.com/OBKoro1/koro1FileHeader/wiki/%E9%85%8D%E7%BD%AE
  */
@@ -187,7 +187,7 @@ class WebDownloader {
       let remainConnect = this.maxDownloadConnect - this.usedConnect;
       console.log(`当前剩余请求下载长度： ${this.fetchQueue.length}`);
       console.log(`正在下载的请求数： ${this.usedConnect}`);
-      console.log(`本次将使用请求数: ${remainConnect}`);
+      console.log(`本次可用请求数: ${remainConnect}`);
       for (let index = 0; index < remainConnect; index++) {
         const curDownload = this.fetchQueue.shift();
         if (curDownload) {
@@ -228,6 +228,7 @@ class WebDownloader {
               fileInfo: curDownload.fileInfo,
               index: curDownload.index,
             });
+            this.pause(curDownload.fileInfo.fileId);
           }
           // 繼續下載文件
           this.checkDownload();

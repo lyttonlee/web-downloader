@@ -2,7 +2,7 @@
  * @Author: lyttonlee lzr3278@163.com
  * @Date: 2022-12-02 13:37:34
  * @LastEditors: lyttonlee lzr3278@163.com
- * @LastEditTime: 2022-12-08 13:39:00
+ * @LastEditTime: 2022-12-09 16:40:53
  * @FilePath: \web-downloader\src\main.ts
  * @Description: 这是默认设置,请设置`customMade`, 打开koroFileHeader查看配置 进行设置: https://github.com/OBKoro1/koro1FileHeader/wiki/%E9%85%8D%E7%BD%AE
  */
@@ -17,6 +17,10 @@ const files = [
   {
     url: '/files/check.zip',
     fileName: 'check.zip',
+  },
+  {
+    url: 'https://disk.westone.com.cn/v2/item/download/6b9918c70d2547a29451b035b7e2a2df/COOPERATION/Y',
+    fileName: 'test.zip',
   },
 ];
 
