@@ -2,7 +2,7 @@
  * @Author: lyttonlee lzr3278@163.com
  * @Date: 2022-12-02 13:37:34
  * @LastEditors: lyttonlee lzr3278@163.com
- * @LastEditTime: 2022-12-09 16:40:53
+ * @LastEditTime: 2022-12-12 11:18:14
  * @FilePath: \web-downloader\src\main.ts
  * @Description: 这是默认设置,请设置`customMade`, 打开koroFileHeader查看配置 进行设置: https://github.com/OBKoro1/koro1FileHeader/wiki/%E9%85%8D%E7%BD%AE
  */
@@ -19,7 +19,7 @@ const files = [
     fileName: 'check.zip',
   },
   {
-    url: 'https://disk.westone.com.cn/v2/item/download/6b9918c70d2547a29451b035b7e2a2df/COOPERATION/Y',
+    url: '/v2/item/download/6b9918c70d2547a29451b035b7e2a2df/COOPERATION/Y',
     fileName: 'test.zip',
   },
 ];
@@ -69,9 +69,15 @@ files.forEach((file) => {
   app?.appendChild(li);
 });
 
+const customHeader = new Headers();
+
+customHeader.set('token', '12121212');
+customHeader.set('platform', 'WEB');
+
 const downloader = new WebDownloader({
-  maxDownloadConnect: 5,
+  maxDownloadConnect: 10,
   fileChunkSize: 5 * 1024 * 1024,
+  header: customHeader,
 });
 
 console.log(downloader);
@@ -84,7 +90,7 @@ let callback = (info: FileInfo) => {
     let time = ((info.lastUpdateTime - info.startTime) / 1000).toFixed(2);
     let accept = (info.accept / 1024 / 1024).toFixed(2);
     let total = (info.size / 1024 / 1024).toFixed(2);
-    el.innerText = `speed: ${info.speed}, 耗時： ${time}秒， 大小：${accept}Mb / ${total}Mb`;
+    el.innerText = `speed: ${info.averageSpeed}, 耗時： ${time}秒， 大小：${accept}Mb / ${total}Mb`;
     el.style.width = `${info.progress}%`;
     // if (el.firstElementChild) {
     //   el.firstElementChild.setAttribute(

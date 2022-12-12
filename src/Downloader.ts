@@ -2,7 +2,7 @@
  * @Author: lyttonlee lzr3278@163.com
  * @Date: 2022-12-02 13:41:26
  * @LastEditors: lyttonlee lzr3278@163.com
- * @LastEditTime: 2022-12-09 16:55:24
+ * @LastEditTime: 2022-12-12 11:15:32
  * @FilePath: \web-downloader\src\Downloader.ts
  * @Description: 这是默认设置,请设置`customMade`, 打开koroFileHeader查看配置 进行设置: https://github.com/OBKoro1/koro1FileHeader/wiki/%E9%85%8D%E7%BD%AE
  */
@@ -12,6 +12,7 @@ import { sumProgress, sumSpeed } from './utils/util';
 interface Option {
   fileChunkSize?: number;
   maxDownloadConnect?: number;
+  header?: Headers;
 }
 
 interface QueueItem {
@@ -34,6 +35,7 @@ class WebDownloader {
   // 下载的请求队列，每次添加新文件下载时，会默认切片后推入下载队列
   private fetchQueue: Array<QueueItem>;
   // private fetchMap: Map<string, Array<QueueItem>>;
+  private userHeader: Headers | undefined;
   // 正在被使用的下载连接数
   private usedConnect: number;
   // 失败异常的请求队列
@@ -43,6 +45,7 @@ class WebDownloader {
   constructor(option?: Option) {
     this.fileChunkSize = option?.fileChunkSize || 5 * 1024 * 1024;
     this.maxDownloadConnect = option?.maxDownloadConnect || 5;
+    this.userHeader = option?.header;
     this.downloadList = [];
     this.fetchQueue = [];
     // this.fetchMap = new Map();
@@ -195,6 +198,9 @@ class WebDownloader {
           try {
             this.usedConnect++;
             let start = new Date().valueOf();
+            if (curDownload.index === 0) {
+              curDownload.fileInfo.startTime = start;
+            }
             const buffer = await this.getFileChunk(
               curDownload?.fileInfo,
               curDownload?.index
@@ -208,7 +214,13 @@ class WebDownloader {
             console.log(fileInfo.speed);
             fileInfo.progress = sumProgress(fileInfo.accept, fileInfo.size);
             console.log(fileInfo.progress);
+
             fileInfo.lastUpdateTime = new Date().valueOf();
+            fileInfo.averageSpeed = sumSpeed(
+              fileInfo.accept,
+              fileInfo.lastUpdateTime - fileInfo.startTime
+            );
+            console.log(fileInfo.averageSpeed);
             if (curDownload.index === 0) {
               fileInfo.status = status.DOWNLOADING;
             }
@@ -269,8 +281,13 @@ class WebDownloader {
   private getFileTotalSize(fileInfo: FileInfo): Promise<number> {
     return new Promise(async (resolve, reject) => {
       try {
+        if (this.userHeader) {
+          console.log(this.userHeader);
+        }
+        // debugger;
         const headRes = await fetch(fileInfo.url, {
           method: 'head',
+          headers: Object.assign({}, this.userHeader),
         });
         console.log(headRes.statusText);
         if (
@@ -299,11 +316,16 @@ class WebDownloader {
         let start = index * this.fileChunkSize;
         let originEnd = start + this.fileChunkSize - 1;
         let end = originEnd >= fileInfo.size ? fileInfo.size - 1 : originEnd;
-        let header = new Headers();
-        header.set('range', `bytes=${start}-${end}`);
+        if (this.userHeader) {
+          this.userHeader.set('range', `bytes=${start}-${end}`);
+        } else {
+          this.userHeader = new Headers();
+          this.userHeader.set('range', `bytes=${start}-${end}`);
+        }
+
         const chunk = await fetch(fileInfo.url, {
           method: 'get',
-          headers: header,
+          headers: this.userHeader,
         });
         // console.log(chunk);
         const buffer = await chunk.arrayBuffer();

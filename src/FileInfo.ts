@@ -2,7 +2,7 @@
  * @Author: lyttonlee lzr3278@163.com
  * @Date: 2022-12-02 15:14:42
  * @LastEditors: lyttonlee lzr3278@163.com
- * @LastEditTime: 2022-12-09 15:07:30
+ * @LastEditTime: 2022-12-12 10:58:59
  * @FilePath: \web-downloader\src\FileInfo.ts
  * @Description: 这是默认设置,请设置`customMade`, 打开koroFileHeader查看配置 进行设置: https://github.com/OBKoro1/koro1FileHeader/wiki/%E9%85%8D%E7%BD%AE
  */
@@ -34,6 +34,7 @@ class FileInfo {
   lastUpdateTime: number;
   chunks: Map<number, ArrayBuffer>;
   speed: string;
+  averageSpeed: string;
   blockLength: number;
   constructor(info: Info) {
     this.url = info.url;
@@ -50,6 +51,8 @@ class FileInfo {
     this.chunks = new Map();
     // 下载速度 更新时计算
     this.speed = '';
+    // 平均速度
+    this.averageSpeed = '';
     this.blockLength = 0;
   }
 }
