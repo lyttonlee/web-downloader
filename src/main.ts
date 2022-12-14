@@ -2,7 +2,7 @@
  * @Author: lyttonlee lzr3278@163.com
  * @Date: 2022-12-02 13:37:34
  * @LastEditors: lyttonlee lzr3278@163.com
- * @LastEditTime: 2022-12-12 11:18:14
+ * @LastEditTime: 2022-12-14 10:38:07
  * @FilePath: \web-downloader\src\main.ts
  * @Description: 这是默认设置,请设置`customMade`, 打开koroFileHeader查看配置 进行设置: https://github.com/OBKoro1/koro1FileHeader/wiki/%E9%85%8D%E7%BD%AE
  */
@@ -79,8 +79,6 @@ const downloader = new WebDownloader({
   fileChunkSize: 5 * 1024 * 1024,
   header: customHeader,
 });
-
-console.log(downloader);
 
 let callback = (info: FileInfo) => {
   console.log(info);

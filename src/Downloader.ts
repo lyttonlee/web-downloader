@@ -2,12 +2,12 @@
  * @Author: lyttonlee lzr3278@163.com
  * @Date: 2022-12-02 13:41:26
  * @LastEditors: lyttonlee lzr3278@163.com
- * @LastEditTime: 2022-12-12 11:15:32
+ * @LastEditTime: 2022-12-14 14:46:55
  * @FilePath: \web-downloader\src\Downloader.ts
  * @Description: 这是默认设置,请设置`customMade`, 打开koroFileHeader查看配置 进行设置: https://github.com/OBKoro1/koro1FileHeader/wiki/%E9%85%8D%E7%BD%AE
  */
 import FileInfo, { status } from './FileInfo';
-import { sumProgress, sumSpeed } from './utils/util';
+import { cloneObject, sumProgress, sumSpeed } from './utils/util';
 
 interface Option {
   fileChunkSize?: number;
@@ -229,7 +229,9 @@ class WebDownloader {
               this.saveFile(fileInfo);
             }
             if (this.progressFn.length > 0) {
-              this.progressFn.forEach((fn) => fn(fileInfo));
+              let clonedInfo = cloneObject(fileInfo, ['chunks', 'speed']);
+              console.log(clonedInfo);
+              this.progressFn.forEach((fn) => fn(clonedInfo));
             }
             this.usedConnect--;
           } catch (error) {
@@ -252,42 +254,53 @@ class WebDownloader {
   private saveFile(info: FileInfo) {
     // 1. 拼接文件
     console.log(info);
-    let result = new Uint8Array(info.size);
+    let result: Uint8Array | null = new Uint8Array(info.size);
     let offset = 0;
     for (let i = 0; i < info.chunks.size; i++) {
-      let buffer = info.chunks.get(i);
+      let buffer: ArrayBuffer | null | undefined = info.chunks.get(i);
       if (buffer) {
         let buf = new Uint8Array(buffer);
         result.set(buf, offset);
         offset += buf.length;
+        buffer = null;
       }
     }
     // 2. 下載文件
     const blod = new Blob([result]);
-    const a = document.createElement('a');
+    let a = document.createElement('a');
     const url = URL.createObjectURL(blod);
     a.href = url;
     a.download = info.fileName;
     a.click();
+    a.remove();
     // 釋放url
     URL.revokeObjectURL(url);
+    result = null;
     // 清楚記錄
     const index = this.downloadList.findIndex(
       (item) => item.fileId === info.fileId
     );
-    this.downloadList.splice(index, 1);
+    let temp = this.downloadList.splice(index, 1);
+    temp.forEach((item) => {
+      item.chunks = new Map();
+    });
+    console.log(this);
   }
 
   private getFileTotalSize(fileInfo: FileInfo): Promise<number> {
     return new Promise(async (resolve, reject) => {
       try {
+        let header: Headers = new Headers();
         if (this.userHeader) {
-          console.log(this.userHeader);
+          // header = this.userHeader;
+          this.userHeader.forEach((value, key) => {
+            header.set(key, value);
+          });
         }
         // debugger;
         const headRes = await fetch(fileInfo.url, {
           method: 'head',
-          headers: Object.assign({}, this.userHeader),
+          headers: header,
         });
         console.log(headRes.statusText);
         if (
@@ -296,7 +309,12 @@ class WebDownloader {
         ) {
           let contentSize = headRes.headers.get('content-length');
           console.log(contentSize);
-          resolve(Number(contentSize));
+          if (contentSize) {
+            resolve(Number(contentSize));
+          } else {
+            fileInfo.errorMsg = '没有文件长度信息！';
+            throw new Error(`没有文件长度信息！`);
+          }
         } else {
           fileInfo.errorMsg = '获取文件长度失败！';
           throw new Error(`获取文件长度失败！`);
@@ -316,16 +334,19 @@ class WebDownloader {
         let start = index * this.fileChunkSize;
         let originEnd = start + this.fileChunkSize - 1;
         let end = originEnd >= fileInfo.size ? fileInfo.size - 1 : originEnd;
+        let header: Headers = new Headers();
         if (this.userHeader) {
-          this.userHeader.set('range', `bytes=${start}-${end}`);
+          this.userHeader.forEach((value, key) => {
+            header.set(key, value);
+          });
+          header.set('range', `bytes=${start}-${end}`);
         } else {
-          this.userHeader = new Headers();
-          this.userHeader.set('range', `bytes=${start}-${end}`);
+          header.set('range', `bytes=${start}-${end}`);
         }
 
         const chunk = await fetch(fileInfo.url, {
           method: 'get',
-          headers: this.userHeader,
+          headers: header,
         });
         // console.log(chunk);
         const buffer = await chunk.arrayBuffer();
