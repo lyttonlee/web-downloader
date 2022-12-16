@@ -2,7 +2,7 @@
  * @Author: lyttonlee lzr3278@163.com
  * @Date: 2022-12-02 13:41:26
  * @LastEditors: lyttonlee lzr3278@163.com
- * @LastEditTime: 2022-12-14 14:46:55
+ * @LastEditTime: 2022-12-16 16:21:53
  * @FilePath: \web-downloader\src\Downloader.ts
  * @Description: 这是默认设置,请设置`customMade`, 打开koroFileHeader查看配置 进行设置: https://github.com/OBKoro1/koro1FileHeader/wiki/%E9%85%8D%E7%BD%AE
  */
@@ -113,7 +113,6 @@ class WebDownloader {
 
   // 重新開始下載事件 start
   public start(id: string) {
-    console.log(id);
     // 1. 判斷找出異常隊列中存在該id的任務
     // 创建temp数组
     let tempExceptionQueue: Array<QueueItem> = [];
@@ -134,7 +133,6 @@ class WebDownloader {
 
   public delete(id: string) {
     // ..
-    console.log(id);
     this.fetchQueue = this.fetchQueue.filter(
       (item) => item.fileInfo.fileId !== id
     );
@@ -209,18 +207,14 @@ class WebDownloader {
             fileInfo.chunks.set(curDownload.index, buffer);
             fileInfo.accept = fileInfo.accept + buffer.byteLength;
             let now = new Date().valueOf();
-            // console.log(now - start);
             fileInfo.speed = sumSpeed(buffer.byteLength, now - start);
-            console.log(fileInfo.speed);
             fileInfo.progress = sumProgress(fileInfo.accept, fileInfo.size);
-            console.log(fileInfo.progress);
 
             fileInfo.lastUpdateTime = new Date().valueOf();
             fileInfo.averageSpeed = sumSpeed(
               fileInfo.accept,
               fileInfo.lastUpdateTime - fileInfo.startTime
             );
-            console.log(fileInfo.averageSpeed);
             if (curDownload.index === 0) {
               fileInfo.status = status.DOWNLOADING;
             }
@@ -228,16 +222,22 @@ class WebDownloader {
               fileInfo.status = status.END;
               this.saveFile(fileInfo);
             }
+            if (fileInfo.accept > fileInfo.size) {
+              throw new Error('下载错误！文件大小越界');
+            }
             if (this.progressFn.length > 0) {
               let clonedInfo = cloneObject(fileInfo, ['chunks', 'speed']);
-              console.log(clonedInfo);
               this.progressFn.forEach((fn) => fn(clonedInfo));
             }
             this.usedConnect--;
-          } catch (error) {
-            console.log(error);
+          } catch (error: any) {
             this.usedConnect--;
-            curDownload.fileInfo.errorMsg = `获取分片${curDownload.index}失败`;
+            if (error.message) {
+              curDownload.fileInfo.errorMsg = error.message;
+            } else {
+              curDownload.fileInfo.errorMsg = `获取分片${curDownload.index}失败`;
+            }
+
             this.exceptionQueue.push({
               fileInfo: curDownload.fileInfo,
               index: curDownload.index,
@@ -253,7 +253,6 @@ class WebDownloader {
 
   private saveFile(info: FileInfo) {
     // 1. 拼接文件
-    console.log(info);
     let result: Uint8Array | null = new Uint8Array(info.size);
     let offset = 0;
     for (let i = 0; i < info.chunks.size; i++) {
@@ -266,7 +265,7 @@ class WebDownloader {
       }
     }
     // 2. 下載文件
-    const blod = new Blob([result]);
+    let blod: Blob | null = new Blob([result]);
     let a = document.createElement('a');
     const url = URL.createObjectURL(blod);
     a.href = url;
@@ -276,6 +275,7 @@ class WebDownloader {
     // 釋放url
     URL.revokeObjectURL(url);
     result = null;
+    blod = null;
     // 清楚記錄
     const index = this.downloadList.findIndex(
       (item) => item.fileId === info.fileId
@@ -284,7 +284,6 @@ class WebDownloader {
     temp.forEach((item) => {
       item.chunks = new Map();
     });
-    console.log(this);
   }
 
   private getFileTotalSize(fileInfo: FileInfo): Promise<number> {
@@ -302,13 +301,11 @@ class WebDownloader {
           method: 'head',
           headers: header,
         });
-        console.log(headRes.statusText);
         if (
           headRes.statusText.toLowerCase() === 'ok' ||
           headRes.status === 200
         ) {
           let contentSize = headRes.headers.get('content-length');
-          console.log(contentSize);
           if (contentSize) {
             resolve(Number(contentSize));
           } else {
@@ -348,9 +345,7 @@ class WebDownloader {
           method: 'get',
           headers: header,
         });
-        // console.log(chunk);
         const buffer = await chunk.arrayBuffer();
-        // console.log(buffer);
         resolve(buffer);
       } catch (error) {
         reject(error);
