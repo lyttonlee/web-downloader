@@ -5,13 +5,9 @@ specifiers:
   rollup-plugin-dts: ^4.2.2
   rollup-plugin-terser: ^7.0.2
   rollup-plugin-typescript2: ^0.34.0
-  sm-crypto: ^0.3.11
   tslib: ^2.4.0
   typescript: ^4.6.4
   vite: ^3.2.3
-
-dependencies:
-  sm-crypto: 0.3.11
 
 devDependencies:
   rollup: 2.79.1
@@ -453,10 +449,6 @@ packages:
     resolution: {integrity: sha512-RdJUflcE3cUzKiMqQgsCu06FPu9UdIJO0beYbPhHN4k6apgJtifcoCtT9bcxOpYBtpD2kCM6Sbzg4CausW/PKQ==}
     dev: true
 
-  /jsbn/1.1.0:
-    resolution: {integrity: sha512-4bYVV3aAMtDTTu4+xsDYa6sy9GyJ69/amsu9sYF2zqjiEoZA5xJi3BrfX3uY+/IekIu7MwdObdbDWpoZdBv3/A==}
-    dev: false
-
   /jsonfile/6.1.0:
     resolution: {integrity: sha512-5dgndWOriYSm5cnYaJNhalLNDKOqFwyDB/rr1E9ZsGciGvKPs8R2xYGCacuf3z6K1YKDz182fd+fY3cn3pMqXQ==}
     dependencies:
@@ -643,12 +635,6 @@ packages:
     dependencies:
       randombytes: 2.1.0
     dev: true
-
-  /sm-crypto/0.3.11:
-    resolution: {integrity: sha512-qBIyyTknmwfF8nStKHshL4Caw1AAfkar8B/voiEReENeCLtudbPt6B16QJ1mgAn1B4w0T+QDcu5XzGc7s22fWw==}
-    dependencies:
-      jsbn: 1.1.0
-    dev: false
 
   /source-map-js/1.0.2:
     resolution: {integrity: sha512-R0XvVJ9WusLiqTCEiGCmICCMplcCkIwwR11mOSD9CR5u+IXYdiseeEuXCVAjS54zqwkLcPNnmU4OeJ6tUrWhDw==}

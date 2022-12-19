@@ -19,9 +19,13 @@ const files = [
     fileName: 'check.zip',
   },
   {
-    url: '/v2/item/download/6b9918c70d2547a29451b035b7e2a2df/COOPERATION/Y',
-    fileName: 'test.zip',
+    url: '/files/git.exe',
+    fileName: 'git.exe',
   },
+  {
+    url: '/files/全战三国1.7dlc及补丁.rar',
+    fileName: '全战三国1.7dlc及补丁.rar'
+  }
 ];
 
 const app = document.getElementById('app');
@@ -75,7 +79,7 @@ customHeader.set('token', '12121212');
 customHeader.set('platform', 'WEB');
 
 const downloader = new WebDownloader({
-  maxDownloadConnect: 10,
+  maxDownloadConnect: 5,
   fileChunkSize: 5 * 1024 * 1024,
   header: customHeader,
 });

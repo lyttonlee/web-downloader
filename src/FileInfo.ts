@@ -32,7 +32,6 @@ class FileInfo {
   size: number;
   accept: number;
   lastUpdateTime: number;
-  chunks: Map<number, ArrayBuffer>;
   speed: string;
   averageSpeed: string;
   blockLength: number;
@@ -48,7 +47,6 @@ class FileInfo {
     this.size = 0;
     this.accept = 0;
     this.lastUpdateTime = 0;
-    this.chunks = new Map();
     // 下载速度 更新时计算
     this.speed = '';
     // 平均速度

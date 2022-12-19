@@ -19,6 +19,7 @@ interface QueueItem {
   index: number;
   fileInfo: FileInfo;
 }
+
 export enum eventName {
   progress = 'progress',
 }
@@ -42,11 +43,14 @@ class WebDownloader {
   private exceptionQueue: Array<QueueItem>;
   // 监听下载进度回调事件
   private progressFn: Array<Function>;
+  // 下载文件的ArrayBuffer Map
+  private fileBufferMap: Map<string, Map<number, ArrayBuffer>>
   constructor(option?: Option) {
     this.fileChunkSize = option?.fileChunkSize || 5 * 1024 * 1024;
     this.maxDownloadConnect = option?.maxDownloadConnect || 5;
     this.userHeader = option?.header;
     this.downloadList = [];
+    this.fileBufferMap = new Map()
     this.fetchQueue = [];
     // this.fetchMap = new Map();
     this.exceptionQueue = [];
@@ -151,6 +155,7 @@ class WebDownloader {
       hash,
     });
     this.downloadList.push(fileInfo);
+    this.fileBufferMap.set(fileInfo.fileId, new Map())
     this.downloadFile(fileInfo);
     return fileInfo;
   }
@@ -204,7 +209,8 @@ class WebDownloader {
               curDownload?.index
             );
 
-            fileInfo.chunks.set(curDownload.index, buffer);
+            // fileInfo.chunks.set(curDownload.index, buffer);
+            this.fileBufferMap.get(fileInfo.fileId)?.set(curDownload.index, buffer)
             fileInfo.accept = fileInfo.accept + buffer.byteLength;
             let now = new Date().valueOf();
             fileInfo.speed = sumSpeed(buffer.byteLength, now - start);
@@ -255,8 +261,12 @@ class WebDownloader {
     // 1. 拼接文件
     let result: Uint8Array | null = new Uint8Array(info.size);
     let offset = 0;
-    for (let i = 0; i < info.chunks.size; i++) {
-      let buffer: ArrayBuffer | null | undefined = info.chunks.get(i);
+    let chunksMap = this.fileBufferMap.get(info.fileId)
+    if (!chunksMap) {
+      throw new Error(`下载${info.fileName}失败！`)
+    }
+    for (let i = 0; i < info.blockLength; i++) {
+      let buffer: ArrayBuffer | null | undefined = chunksMap.get(i);
       if (buffer) {
         let buf = new Uint8Array(buffer);
         result.set(buf, offset);
@@ -276,14 +286,12 @@ class WebDownloader {
     URL.revokeObjectURL(url);
     result = null;
     blod = null;
-    // 清楚記錄
+    // 清除記錄
     const index = this.downloadList.findIndex(
       (item) => item.fileId === info.fileId
     );
-    let temp = this.downloadList.splice(index, 1);
-    temp.forEach((item) => {
-      item.chunks = new Map();
-    });
+    this.fileBufferMap.delete(info.fileId)
+    this.downloadList.splice(index, 1);
   }
 
   private getFileTotalSize(fileInfo: FileInfo): Promise<number> {
