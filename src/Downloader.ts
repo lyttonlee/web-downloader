@@ -20,8 +20,14 @@ interface QueueItem {
   fileInfo: FileInfo;
 }
 
+export interface DownloadException {
+  fileId: string
+  msg: string
+}
+
 export enum eventName {
   progress = 'progress',
+  error = 'error'
 }
 
 // type eventName = 'progress'
@@ -43,6 +49,7 @@ class WebDownloader {
   private exceptionQueue: Array<QueueItem>;
   // 监听下载进度回调事件
   private progressFn: Array<Function>;
+  private errorFn: Array<Function>
   // 下载文件的ArrayBuffer Map
   private fileBufferMap: Map<string, Map<number, ArrayBuffer>>
   constructor(option?: Option) {
@@ -56,6 +63,7 @@ class WebDownloader {
     this.exceptionQueue = [];
     this.usedConnect = 0;
     this.progressFn = [];
+    this.errorFn = []
     this.init();
   }
 
@@ -73,7 +81,17 @@ class WebDownloader {
 
   public on(type: eventName, callback: Function) {
     if (type in eventName) {
-      this.progressFn.push(callback);
+      switch (type) {
+        case eventName.progress:
+          this.progressFn.push(callback);
+          break;
+        case eventName.error:
+          this.errorFn.push(callback);
+          break;
+        default:
+          break;
+      }
+      
     } else {
       throw new Error(`不支持的事件名: ${type} !`);
     }
@@ -81,19 +99,49 @@ class WebDownloader {
 
   public off(type: eventName, callback: Function) {
     if (type in eventName) {
-      let fnIndex = this.progressFn.findIndex((fn) => fn === callback);
-      if (fnIndex !== -1) {
-        this.progressFn.splice(fnIndex, 1);
-      } else {
-        throw new Error('未注册的回调函数');
+      switch (type) {
+        case eventName.progress:
+          let fnIndex = this.progressFn.findIndex((fn) => fn === callback);
+          if (fnIndex !== -1) {
+            this.progressFn.splice(fnIndex, 1);
+          } else {
+            throw new Error('未注册的回调函数');
+          }
+          break;
+        case eventName.error:
+          let errorfnIndex = this.progressFn.findIndex((fn) => fn === callback);
+          if (errorfnIndex !== -1) {
+            this.errorFn.splice(errorfnIndex, 1);
+          } else {
+            throw new Error('未注册的回调函数');
+          }
+          break;
+        default:
+          
+          break;
       }
+      
     } else {
       throw new Error(`不支持的事件名: ${type} !`);
     }
   }
 
+  private runCallbackFn (type: eventName, param: DownloadException | FileInfo) {
+    switch (type) {
+      case eventName.progress:
+        this.progressFn.forEach(fn => fn(param))
+        break;
+      case eventName.error:
+        this.errorFn.forEach(fn => fn(param))
+        break;
+      default:
+        break;
+    }
+  }
+
   public clearAllEvent() {
     this.progressFn = [];
+    this.errorFn = [];
   }
 
   // 下载暂停事件
@@ -180,7 +228,13 @@ class WebDownloader {
       // 检查资源开始下载
       this.checkDownload();
     } catch (error) {
-      fileInfo.errorMsg = '获取文件长度失败！';
+      let errorInfo = '获取文件长度失败！'
+      this.runCallbackFn(eventName.error, {
+        fileId: fileInfo.fileId,
+        msg: errorInfo
+      })
+      fileInfo.errorMsg = errorInfo;
+      
     }
   }
 
@@ -249,6 +303,11 @@ class WebDownloader {
               index: curDownload.index,
             });
             this.pause(curDownload.fileInfo.fileId);
+            let errorInfo = `获取分片${curDownload.index}失败`
+            this.runCallbackFn(eventName.error, {
+              fileId: fileInfo.fileId,
+              msg: errorInfo
+            })
           }
           // 繼續下載文件
           this.checkDownload();
@@ -325,6 +384,11 @@ class WebDownloader {
           throw new Error(`获取文件长度失败！`);
         }
       } catch (error) {
+        let errorInfo = `获取文件${fileInfo.fileName}长度失败！`
+        this.runCallbackFn(eventName.error, {
+          fileId: fileInfo.fileId,
+          msg: errorInfo
+        })
         reject(error);
       }
     });
@@ -356,6 +420,12 @@ class WebDownloader {
         const buffer = await chunk.arrayBuffer();
         resolve(buffer);
       } catch (error) {
+        let errorInfo = `下载文件${fileInfo.fileName}第${index}分片！`
+        this.runCallbackFn(eventName.error, {
+          fileId: fileInfo.fileId,
+          msg: errorInfo
+        })
+        fileInfo.errorMsg = errorInfo
         reject(error);
       }
     });
