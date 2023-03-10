@@ -2,7 +2,7 @@
  * @Author: lyttonlee lzr3278@163.com
  * @Date: 2022-12-02 13:41:26
  * @LastEditors: lyttonlee lzr3278@163.com
- * @LastEditTime: 2022-12-16 16:21:53
+ * @LastEditTime: 2023-02-03 10:31:19
  * @FilePath: \web-downloader\src\Downloader.ts
  * @Description: 这是默认设置,请设置`customMade`, 打开koroFileHeader查看配置 进行设置: https://github.com/OBKoro1/koro1FileHeader/wiki/%E9%85%8D%E7%BD%AE
  */
@@ -21,13 +21,13 @@ interface QueueItem {
 }
 
 export interface DownloadException {
-  fileId: string
-  msg: string
+  fileId: string;
+  msg: string;
 }
 
 export enum eventName {
   progress = 'progress',
-  error = 'error'
+  error = 'error',
 }
 
 // type eventName = 'progress'
@@ -49,21 +49,21 @@ class WebDownloader {
   private exceptionQueue: Array<QueueItem>;
   // 监听下载进度回调事件
   private progressFn: Array<Function>;
-  private errorFn: Array<Function>
+  private errorFn: Array<Function>;
   // 下载文件的ArrayBuffer Map
-  private fileBufferMap: Map<string, Map<number, ArrayBuffer>>
+  private fileBufferMap: Map<string, Map<number, ArrayBuffer>>;
   constructor(option?: Option) {
     this.fileChunkSize = option?.fileChunkSize || 5 * 1024 * 1024;
     this.maxDownloadConnect = option?.maxDownloadConnect || 5;
     this.userHeader = option?.header;
     this.downloadList = [];
-    this.fileBufferMap = new Map()
+    this.fileBufferMap = new Map();
     this.fetchQueue = [];
     // this.fetchMap = new Map();
     this.exceptionQueue = [];
     this.usedConnect = 0;
     this.progressFn = [];
-    this.errorFn = []
+    this.errorFn = [];
     this.init();
   }
 
@@ -91,7 +91,6 @@ class WebDownloader {
         default:
           break;
       }
-      
     } else {
       throw new Error(`不支持的事件名: ${type} !`);
     }
@@ -117,22 +116,20 @@ class WebDownloader {
           }
           break;
         default:
-          
           break;
       }
-      
     } else {
       throw new Error(`不支持的事件名: ${type} !`);
     }
   }
 
-  private runCallbackFn (type: eventName, param: DownloadException | FileInfo) {
+  private runCallbackFn(type: eventName, param: DownloadException | FileInfo) {
     switch (type) {
       case eventName.progress:
-        this.progressFn.forEach(fn => fn(param))
+        this.progressFn.forEach((fn) => fn(param));
         break;
       case eventName.error:
-        this.errorFn.forEach(fn => fn(param))
+        this.errorFn.forEach((fn) => fn(param));
         break;
       default:
         break;
@@ -203,7 +200,7 @@ class WebDownloader {
       hash,
     });
     this.downloadList.push(fileInfo);
-    this.fileBufferMap.set(fileInfo.fileId, new Map())
+    this.fileBufferMap.set(fileInfo.fileId, new Map());
     this.downloadFile(fileInfo);
     return fileInfo;
   }
@@ -228,13 +225,12 @@ class WebDownloader {
       // 检查资源开始下载
       this.checkDownload();
     } catch (error) {
-      let errorInfo = '获取文件长度失败！'
+      let errorInfo = '获取文件长度失败！';
       this.runCallbackFn(eventName.error, {
         fileId: fileInfo.fileId,
-        msg: errorInfo
-      })
+        msg: errorInfo,
+      });
       fileInfo.errorMsg = errorInfo;
-      
     }
   }
 
@@ -264,7 +260,9 @@ class WebDownloader {
             );
 
             // fileInfo.chunks.set(curDownload.index, buffer);
-            this.fileBufferMap.get(fileInfo.fileId)?.set(curDownload.index, buffer)
+            this.fileBufferMap
+              .get(fileInfo.fileId)
+              ?.set(curDownload.index, buffer);
             fileInfo.accept = fileInfo.accept + buffer.byteLength;
             let now = new Date().valueOf();
             fileInfo.speed = sumSpeed(buffer.byteLength, now - start);
@@ -303,11 +301,11 @@ class WebDownloader {
               index: curDownload.index,
             });
             this.pause(curDownload.fileInfo.fileId);
-            let errorInfo = `获取分片${curDownload.index}失败`
+            let errorInfo = `获取分片${curDownload.index}失败`;
             this.runCallbackFn(eventName.error, {
               fileId: fileInfo.fileId,
-              msg: errorInfo
-            })
+              msg: errorInfo,
+            });
           }
           // 繼續下載文件
           this.checkDownload();
@@ -320,9 +318,9 @@ class WebDownloader {
     // 1. 拼接文件
     let result: Uint8Array | null = new Uint8Array(info.size);
     let offset = 0;
-    let chunksMap = this.fileBufferMap.get(info.fileId)
+    let chunksMap = this.fileBufferMap.get(info.fileId);
     if (!chunksMap) {
-      throw new Error(`下载${info.fileName}失败！`)
+      throw new Error(`下载${info.fileName}失败！`);
     }
     for (let i = 0; i < info.blockLength; i++) {
       let buffer: ArrayBuffer | null | undefined = chunksMap.get(i);
@@ -349,7 +347,7 @@ class WebDownloader {
     const index = this.downloadList.findIndex(
       (item) => item.fileId === info.fileId
     );
-    this.fileBufferMap.delete(info.fileId)
+    this.fileBufferMap.delete(info.fileId);
     this.downloadList.splice(index, 1);
   }
 
@@ -384,11 +382,11 @@ class WebDownloader {
           throw new Error(`获取文件长度失败！`);
         }
       } catch (error) {
-        let errorInfo = `获取文件${fileInfo.fileName}长度失败！`
+        let errorInfo = `获取文件${fileInfo.fileName}长度失败！`;
         this.runCallbackFn(eventName.error, {
           fileId: fileInfo.fileId,
-          msg: errorInfo
-        })
+          msg: errorInfo,
+        });
         reject(error);
       }
     });
@@ -420,12 +418,12 @@ class WebDownloader {
         const buffer = await chunk.arrayBuffer();
         resolve(buffer);
       } catch (error) {
-        let errorInfo = `下载文件${fileInfo.fileName}第${index}分片！`
+        let errorInfo = `下载文件${fileInfo.fileName}第${index}分片！`;
         this.runCallbackFn(eventName.error, {
           fileId: fileInfo.fileId,
-          msg: errorInfo
-        })
-        fileInfo.errorMsg = errorInfo
+          msg: errorInfo,
+        });
+        fileInfo.errorMsg = errorInfo;
         reject(error);
       }
     });
